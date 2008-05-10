@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name           AutoPagerize
+// @name           AutoPagerize(modified by ganaware)
 // @namespace      http://swdyh.yu.to/
 // @description    loading next page and inserting into current page.
 // @include        *
@@ -16,6 +16,7 @@
 // Released under the GPL license
 // http://www.gnu.org/copyleft/gpl.html
 //
+// modified by ganaware
 
 //if (window != window.parent) {
 //    return
@@ -102,6 +103,7 @@ var AutoPager = function(info) {
     window.addEventListener("scroll", this.scroll, false)
     this.initIcon()
     this.initHelp()
+    this.fixIconPos()
     this.icon.addEventListener("mouseover",
         function(){self.viewHelp()}, true)
     var scrollHeight = getScrollHeight()
@@ -123,7 +125,7 @@ AutoPager.prototype.getPageElementsBottom = function() {
 AutoPager.prototype.initHelp = function() {
     var helpDiv = document.createElement('div')
     helpDiv.setAttribute('id', 'autopagerize_help')
-    helpDiv.setAttribute('style', 'padding:5px;position:fixed;' +
+    helpDiv.setAttribute('style', 'padding:5px;position:absolute;' +
                      'top:-200px;right:3px;font-size:10px;' +
                      'background:#fff;color:#000;border:1px solid #ccc;' +
                      'z-index:256;text-align:left;font-weight:normal;' +
@@ -176,7 +178,7 @@ AutoPager.prototype.initHelp = function() {
 }
 
 AutoPager.prototype.viewHelp = function() {
-    this.helpLayer.style.top = '3px'
+    this.helpLayer.style.top = (window.scrollY + 3) + 'px'
 }
 
 AutoPager.prototype.onScroll = function() {
@@ -186,6 +188,15 @@ AutoPager.prototype.onScroll = function() {
     if (this.state == 'enable' && remain < this.remainHeight) {
           this.request()
     }
+    var self = this
+    if (this.iconTimer) {
+        window.clearTimeout(this.iconTimer)
+        this.iconTimer = null
+    }
+    this.iconTimer = window.setTimeout(function() {
+        self.iconTimer = null
+        self.fixIconPos()
+    }, 1000)
 }
 
 AutoPager.prototype.stateToggle = function() {
@@ -314,7 +325,7 @@ AutoPager.prototype.initIcon = function() {
     div.setAttribute('id', 'autopagerize_icon')
     with (div.style) {
         fontSize   = '12px'
-        position   = 'fixed'
+        position   = 'absolute'
         top        = '3px'
         right      = '3px'
         background = COLOR['on']
@@ -328,6 +339,10 @@ AutoPager.prototype.initIcon = function() {
     }
     document.body.appendChild(div)
     this.icon = div
+}
+
+AutoPager.prototype.fixIconPos = function() {
+    this.icon.style.top = (window.scrollY + 3) + 'px'
 }
 
 AutoPager.prototype.getNextURL = function(xpath, doc) {
@@ -344,6 +359,10 @@ AutoPager.prototype.getNextURL = function(xpath, doc) {
 AutoPager.prototype.terminate = function() {
     this.icon.style.background = COLOR['terminated']
     window.removeEventListener('scroll', this.scroll, false)
+    if (this.iconTimer) {
+        window.clearTimeout(this.iconTimer)
+        this.iconTimer = null
+    }
     var self = this
     setTimeout(function() {
         self.icon.parentNode.removeChild(self.icon)
@@ -353,6 +372,10 @@ AutoPager.prototype.terminate = function() {
 AutoPager.prototype.error = function() {
     this.icon.style.background = COLOR['error']
     window.removeEventListener('scroll', this.scroll, false)
+    if (this.iconTimer) {
+        window.clearTimeout(this.iconTimer)
+        this.iconTimer = null
+    }
 }
 
 AutoPager.documentFilters = []
