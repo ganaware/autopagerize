@@ -2,11 +2,13 @@
 // @name           AutoPagerize(modified by ganaware)
 // @namespace      http://swdyh.yu.to/
 // @description    loading next page and inserting into current page.
-// @include        *
+// @include        http://*
+// @include        https://*
+// @exclude        https://mail.google.com/*
 // ==/UserScript==
 //
 // auther:  swdyh http://d.hatena.ne.jp/swdyh/
-// version: 0.0.29 2008-04-26T20:59:19+09:00
+// version: 0.0.31 2008-06-29T03:49:37+09:00
 //
 // this script based on
 // GoogleAutoPager(http://la.ma.la/blog/diary_200506231749.htm) and
@@ -18,13 +20,9 @@
 //
 // modified by ganaware
 
-//if (window != window.parent) {
-//    return
-//}
-
 var HTML_NAMESPACE = 'http://www.w3.org/1999/xhtml'
 var URL = 'http://userscripts.org/scripts/show/8551'
-var VERSION = '0.0.29'
+var VERSION = '0.0.31'
 var DEBUG = false
 var AUTO_START = true
 var CACHE_EXPIRE = 24 * 60 * 60 * 1000
@@ -224,10 +222,11 @@ AutoPager.prototype.request = function() {
     if (!this.requestURL || this.lastRequestURL == this.requestURL) {
         return
     }
-    if (!isSameDomain(this.requestURL)) {
-        this.error()
+
+    if ( !this.canHandleCrossDomainRequest() ) {
         return
     }
+
     this.lastRequestURL = this.requestURL
     var self = this
     var mime = 'text/html; charset=' + document.characterSet
@@ -254,6 +253,10 @@ AutoPager.prototype.showLoading = function(sw) {
 }
 
 AutoPager.prototype.requestLoad = function(res) {
+    if ( !this.canHandleCrossDomainRequest() ) {
+        return
+    }
+
     var t = res.responseText
     var htmlDoc = createHTMLDocumentByString(t)
     AutoPager.documentFilters.forEach(function(i) {
@@ -301,10 +304,21 @@ AutoPager.prototype.addPage = function(htmlDoc, page) {
     var self = this
 
     if (page[0] && page[0].tagName == 'TR') {
-        var tr = document.createElementNS(HTML_NAMESPACE, 'tr')
-        tr.appendChild(hr)
-        tr.appendChild(p)
-        this.insertPoint.parentNode.insertBefore(tr, this.insertPoint)
+        var insertParent = this.insertPoint.parentNode
+        var colNodes = getElementsByXPath('child::tr[1]/child::*[self::td or self::th]', insertParent)
+
+        var colums = 0
+        for (var i = 0, l = colNodes.length; i < l; i++) {
+            var col = colNodes[i].getAttribute('colspan')
+            colums += parseInt(col, 10) || 1
+        }
+        var td = document.createElement('td')
+        // td.appendChild(hr)
+        td.appendChild(p)
+        var tr = document.createElement('tr')
+        td.setAttribute('colspan', colums)
+        tr.appendChild(td)
+        insertParent.insertBefore(tr, this.insertPoint)
     }
     else {
         this.insertPoint.parentNode.insertBefore(hr, this.insertPoint)
@@ -354,6 +368,16 @@ AutoPager.prototype.getNextURL = function(xpath, doc) {
         }
         return url
     }
+}
+
+AutoPager.prototype.canHandleCrossDomainRequest = function(url) {
+    if ( !supportsFinalUrl() ) {
+        if (!isSameDomain(this.requestURL)) {
+            this.error()
+            return false
+        }
+    }
+    return true
 }
 
 AutoPager.prototype.terminate = function() {
@@ -548,6 +572,12 @@ var parseInfo = function(str) {
     return isValid(info) ? info : null
 }
 var launchAutoPager = function(list) {
+    if (list.length == 0) {
+        return
+    }
+    list = list.filter(function(i) { return ('url' in i) })
+    list.sort(function(a, b) { return (b.url.length - a.url.length) })
+
     for (var i = 0; i < list.length; i++) {
         try {
             if (ap) {
@@ -782,3 +812,8 @@ function pathToURL(path) {
 function isSameDomain(url) {
     return location.host == url.split('/')[2]
 }
+
+function supportsFinalUrl() {
+    return (GM_getResourceURL)
+}
+
