@@ -94,6 +94,7 @@ var AutoPager = function(info) {
 
     this.requestURL = url
     this.loadedURLs = {}
+    this.loadedURLs[location.href] = true
     var toggle = function() {self.stateToggle()}
     this.toggle = toggle
     GM_registerMenuCommand('AutoPagerize - on/off', toggle)
@@ -223,7 +224,7 @@ AutoPager.prototype.request = function() {
         return
     }
 
-    if ( !this.canHandleCrossDomainRequest() ) {
+    if (!this.canHandleCrossDomainRequest()) {
         return
     }
 
@@ -253,8 +254,12 @@ AutoPager.prototype.showLoading = function(sw) {
 }
 
 AutoPager.prototype.requestLoad = function(res) {
-    if ( !this.canHandleCrossDomainRequest() ) {
+    if (!this.canHandleCrossDomainRequest()) {
         return
+    }
+
+    if (res.finalUrl) {
+        this.requestURL = res.finalUrl
     }
 
     var t = res.responseText
@@ -370,8 +375,8 @@ AutoPager.prototype.getNextURL = function(xpath, doc) {
     }
 }
 
-AutoPager.prototype.canHandleCrossDomainRequest = function(url) {
-    if ( !supportsFinalUrl() ) {
+AutoPager.prototype.canHandleCrossDomainRequest = function() {
+    if (!supportsFinalUrl()) {
         if (!isSameDomain(this.requestURL)) {
             this.error()
             return false
