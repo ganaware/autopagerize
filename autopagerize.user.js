@@ -306,6 +306,8 @@ AutoPager.prototype.requestLoad = function(res) {
 AutoPager.prototype.addPage = function(htmlDoc, page) {
     var hr = document.createElementNS(HTML_NAMESPACE, 'hr')
     var p = document.createElementNS(HTML_NAMESPACE, 'p')
+    hr.setAttribute('class', 'autopagerize_page_separator')
+    p.setAttribute('class', 'autopagerize_page_info')
     var self = this
 
     if (page[0] && page[0].tagName == 'TR') {
